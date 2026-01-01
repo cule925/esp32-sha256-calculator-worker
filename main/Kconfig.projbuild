@@ -1,0 +1,20 @@
+menu "App setup"
+
+    config I2C_SDA_GPIO
+        int "I2C SDA GPIO"
+        default 21
+        help
+            I2C SDA GPIO.
+
+    config I2C_SCL_GPIO
+        int "I2C SCL GPIO"
+        default 22
+        help
+            I2C SCL GPIO.
+
+    config I2C_SLAVE_ADDRESS
+        hex "I2C slave address"
+        default 0x08
+        help
+            I2C slave address.
+endmenu
