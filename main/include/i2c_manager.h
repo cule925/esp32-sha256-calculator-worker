@@ -19,8 +19,7 @@
 /**
  * @brief Initialize I2C slave.
  * 
- * @return int Returns 0 on success, else -1.
  */
-int i2c_manager_slave_init(void);
+void i2c_manager_slave_init(void);
 
 #endif

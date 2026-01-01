@@ -30,13 +30,7 @@
 
 void app_main(void)
 {
-    int ret = 0;
-
-    ret = i2c_manager_slave_init();
-
-    if (ret == 0) ESP_LOGI(LOG_TAG, "I2C slave initialized.");
-    else ESP_LOGE(LOG_TAG, "I2C slave initialization error.");
-
+    i2c_manager_slave_init();
     while (1) {
         ESP_LOGI(LOG_TAG, "Hello from main.");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
