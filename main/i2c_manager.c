@@ -27,6 +27,8 @@
 /** @brief Send buffer transmit timeout. */
 #define SEND_BUF_TRANSMIT_TIMEOUT_MS            (10000)
 
+/* ============================== TYPE DEFINITIONS */
+
 /* ============================== PRIVATE FUNCTION DECLARATIONS */
 
 /**

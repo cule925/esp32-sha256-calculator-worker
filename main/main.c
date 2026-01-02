@@ -14,6 +14,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "i2c_manager.h"
+#include "sha256_calculator.h"
 
 /* ============================== MACRO DEFINITIONS */
 
@@ -25,6 +26,8 @@
 
 /** @brief Size of data I2C master reads. */
 #define I2C_MASTER_R_DATA_SIZE      (4)
+
+/* ============================== TYPE DEFINITIONS */
 
 /* ============================== PRIVATE FUNCTION DECLARATIONS */
 
@@ -44,6 +47,7 @@ void app_main(void)
 {
     ESP_LOGI(LOG_TAG, "Hello from main.");
     i2c_manager_slave_init();
+    sha256_calculator_init();
     while (1) {
         ESP_LOGI(LOG_TAG, "Reading data that I2C master sent me.");
         i2c_manager_slave_get_written_data(_g_i2c_master_w_data, sizeof(_g_i2c_master_w_data));

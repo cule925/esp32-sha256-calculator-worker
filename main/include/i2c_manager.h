@@ -14,6 +14,8 @@
 
 /* ============================== MACRO DEFINITIONS */
 
+/* ============================== TYPE DEFINITIONS */
+
 /* ============================== PUBLIC FUNCTION DECLARATIONS */
 
 /**
