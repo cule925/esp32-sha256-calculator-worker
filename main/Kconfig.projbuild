@@ -17,4 +17,11 @@ menu "App setup"
         default 0x08
         help
             I2C slave address.
+
+    config GPIO_INTERRUPT_OUT
+        int "GPIO interrupt out"
+        default 18
+        help
+            GPIO interrupt out.
+
 endmenu

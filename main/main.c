@@ -15,20 +15,15 @@
 #include "esp_log.h"
 #include "i2c_manager.h"
 #include "sha256_calculator.h"
+#include "gpio_manager.h"
 
 /* ============================== MACRO DEFINITIONS */
 
 /** @brief Log tag. */
 #define LOG_TAG                 ("MAIN")
 
-/** @brief Size of data I2C master writes. */
-#define I2C_MASTER_W_DATA_SIZE      (37)
-
-/** @brief Size of data I2C master reads. */
-#define I2C_MASTER_R_DATA_SIZE      (4)
-
 /** @brief Calculate main controller task stack depth. */
-#define TASK_MAIN_CONTROL_STACK_DEPTH       (1024)
+#define TASK_MAIN_CONTROL_STACK_DEPTH       (2048)
 
 /** @brief Calculate SHA256 task priority. */
 #define TASK_MAIN_CONTROL_PRIORITY          (0)
@@ -64,6 +59,7 @@ void app_main(void)
     BaseType_t result = pdPASS;
 
     ESP_LOGI(LOG_TAG, "Hello from main.");
+    gpio_manager_init();
     i2c_manager_slave_init();
     sha256_calculator_init();
 
@@ -86,17 +82,21 @@ static void _main_control_task(void *p_task_params)
 {
     // TODO: Remove custom hash
     _g_sha256_input_variables.input_offset = 1000;
-    _g_sha256_input_variables.target_solution_mask_offset = 14;
+    _g_sha256_input_variables.target_solution_mask_offset = 16;
     _g_sha256_input_variables.target_solution[0] = 0x54;
     _g_sha256_input_variables.target_solution[1] = 0x82;
+    _g_sha256_input_variables.target_solution[2] = 0xab;
 
     while (1)
     {
         //i2c_manager_slave_get_written_data((uint8_t *)_g_sha256_input_variables, sizeof(sha256_input_variables_t));
+        gpio_reset_interrupt_out();
         sha256_calculator_queue_input_put(&_g_sha256_input_variables);
-        //i2c_manager_slave_set_data_to_be_read((uint8_t *)_g_sha256_offset_solution, sizeof(sha256_offset_solution_t));
         sha256_calculator_queue_solution_get(&_g_sha256_offset_solution);
+        gpio_set_interrupt_out();
+        //i2c_manager_slave_set_data_to_be_read((uint8_t *)_g_sha256_offset_solution, sizeof(sha256_offset_solution_t));
         ESP_LOGI(LOG_TAG, "Offset solution %d", _g_sha256_offset_solution.offset_solution);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }
 
