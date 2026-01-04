@@ -111,15 +111,19 @@ static void _calculate_sha256_task(void *p_task_params)
     uint8_t remaining_bits_mask = 0x00;
     int byte_cmp = 1;
     int bit_cmp = 1;
+    TickType_t ticks_to_wait = portMAX_DELAY;
 
     while (1)
     {
-        /* Try to read from queue, non-blocking */
-        result = xQueueReceive(_g_queue_sha256_input, (void*)(&sha256_input_variables), 0);
+        /* Try to read from queue */
+        result = xQueueReceive(_g_queue_sha256_input, (void*)(&sha256_input_variables), ticks_to_wait);
 
         /* If new inputs read, recalculate parameters */
         if (pdTRUE == result)
         {
+            /* Next queue receive will be non-blocking */
+            ticks_to_wait = 0;
+
             full_bytes = (sha256_input_variables.target_solution_mask_offset + 1) / 8;
             remaining_bits = (sha256_input_variables.target_solution_mask_offset + 1) % 8;
             remaining_bits_mask = 0xFF << (8 - remaining_bits);
@@ -144,10 +148,12 @@ static void _calculate_sha256_task(void *p_task_params)
         /* Send discovered current offset if match, non-blocking */
         if ((0 == byte_cmp) && (0 == bit_cmp))
         {
+            /* Send solution into solution queue */
             sha256_offset_solution.offset_solution = sha256_input_variables.input_offset;
             xQueueSendToBack(_g_queue_sha256_solution, (void*)(&sha256_offset_solution), 0);
 
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            /* Next queue receive will be blocking */
+            ticks_to_wait = portMAX_DELAY;
         }
         /* Increment the offset if no match */
         else
