@@ -73,21 +73,14 @@ void flow_control_init(void)
 
 static void _flow_control_task(void *p_task_params)
 {
-    // TODO: Remove custom hash
-    _g_sha256_input_variables.input_offset = 1000;
-    _g_sha256_input_variables.target_solution_mask_offset = 16;
-    _g_sha256_input_variables.target_solution[0] = 0x54;
-    _g_sha256_input_variables.target_solution[1] = 0x82;
-    _g_sha256_input_variables.target_solution[2] = 0xab;
-
     while (1)
     {
-        //i2c_manager_slave_get_written_data((uint8_t *)_g_sha256_input_variables, sizeof(sha256_input_variables_t));
         gpio_reset_interrupt_out();
+        i2c_manager_slave_get_written_data((uint8_t *)&_g_sha256_input_variables, sizeof(sha256_input_variables_t));
         sha256_calculator_queue_input_put(&_g_sha256_input_variables);
         sha256_calculator_queue_solution_get(&_g_sha256_offset_solution);
+        i2c_manager_slave_set_data_to_be_read((uint8_t *)&_g_sha256_offset_solution, sizeof(sha256_offset_solution_t));
         gpio_set_interrupt_out();
-        //i2c_manager_slave_set_data_to_be_read((uint8_t *)_g_sha256_offset_solution, sizeof(sha256_offset_solution_t));
         ESP_LOGI(LOG_TAG, "Offset solution %d", _g_sha256_offset_solution.offset_solution);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
