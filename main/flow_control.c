@@ -75,14 +75,20 @@ static void _flow_control_task(void *p_task_params)
 {
     while (1)
     {
-        gpio_reset_interrupt_out();
+        /* Receive data and reset flag */
         i2c_manager_slave_get_written_data((uint8_t *)&_g_sha256_input_variables, sizeof(sha256_input_variables_t));
+        gpio_reset_interrupt_out();
+
+        /* Send data for calculation */
         sha256_calculator_queue_input_put(&_g_sha256_input_variables);
         sha256_calculator_queue_solution_get(&_g_sha256_offset_solution);
+
+        /* Set data to be read and set flag */
         i2c_manager_slave_set_data_to_be_read((uint8_t *)&_g_sha256_offset_solution, sizeof(sha256_offset_solution_t));
         gpio_set_interrupt_out();
         ESP_LOGI(LOG_TAG, "Offset solution %d", _g_sha256_offset_solution.offset_solution);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 

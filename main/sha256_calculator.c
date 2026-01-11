@@ -126,7 +126,7 @@ static void _calculate_sha256_task(void *p_task_params)
 
             full_bytes = (sha256_input_variables.target_solution_mask_offset + 1) / 8;
             remaining_bits = (sha256_input_variables.target_solution_mask_offset + 1) % 8;
-            remaining_bits_mask = 0xFF << (8 - remaining_bits);
+            if (remaining_bits != 0) remaining_bits_mask = 0xFF << (8 - remaining_bits);
 
             byte_cmp = (0 == full_bytes) ? 0 : 1;
             bit_cmp = (0 == remaining_bits) ? 0 : 1;
