@@ -37,7 +37,7 @@ void app_main(void)
 {
     ESP_LOGI(LOG_TAG, "Initializing.");
     gpio_manager_init();
-    i2c_manager_slave_init();
+    i2c_manager_slave_init(1, sizeof(sha256_input_variables_t));
     sha256_calculator_init();
     flow_control_init();
 }

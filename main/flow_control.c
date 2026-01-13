@@ -15,7 +15,6 @@
 #include "sdkconfig.h"
 #include "flow_control.h"
 #include "sha256_calculator.h"
-#include "gpio_manager.h"
 #include "i2c_manager.h"
 
 /* ============================== MACRO DEFINITIONS */
@@ -76,19 +75,15 @@ static void _flow_control_task(void *p_task_params)
     while (1)
     {
         /* Receive data and reset flag */
-        i2c_manager_slave_get_written_data((uint8_t *)&_g_sha256_input_variables, sizeof(sha256_input_variables_t));
-        gpio_reset_interrupt_out();
+        i2c_manager_slave_receive_data((uint8_t*)&_g_sha256_input_variables, sizeof(sha256_input_variables_t));
 
         /* Send data for calculation */
         sha256_calculator_queue_input_put(&_g_sha256_input_variables);
         sha256_calculator_queue_solution_get(&_g_sha256_offset_solution);
+        ESP_LOGI(LOG_TAG, "Offset solution %d", _g_sha256_offset_solution.offset_solution);
 
         /* Set data to be read and set flag */
         i2c_manager_slave_set_data_to_be_read((uint8_t *)&_g_sha256_offset_solution, sizeof(sha256_offset_solution_t));
-        gpio_set_interrupt_out();
-        ESP_LOGI(LOG_TAG, "Offset solution %d", _g_sha256_offset_solution.offset_solution);
-
-        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 

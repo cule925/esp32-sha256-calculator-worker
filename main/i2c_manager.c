@@ -15,6 +15,8 @@
 #include "driver/i2c_slave.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "freertos/queue.h"
+#include "gpio_manager.h"
 
 /* ============================== MACRO DEFINITIONS */
 
@@ -24,22 +26,35 @@
 /** @brief Send buffer depth. */
 #define SEND_BUF_DEPTH                          (256)
 
+/** @brief Receive buffer depth. */
+#define RECEIVE_BUF_DEPTH                       (256)
+
 /** @brief Send buffer transmit timeout. */
-#define SEND_BUF_TRANSMIT_TIMEOUT_MS            (10000)
+#define SEND_BUF_TRANSMIT_TIMEOUT_MS            (10)
 
 /* ============================== TYPE DEFINITIONS */
 
 /* ============================== PRIVATE FUNCTION DECLARATIONS */
 
 /**
- * @brief I2C data receive done callback. Runs in instruction RAM for extra speed.
+ * @brief I2C on request callback.
  * 
  * @param i2c_slave_handle I2C slave handle of the I2C controller that caused the interrupt.
  * @param p_event_data I2C slave capture event data.
  * @param p_user_data User passed data on registration.
  * @return bool Returns true if a context switch is needed.
  */
-static IRAM_ATTR bool _i2c_slave_receive_done_callback(i2c_slave_dev_handle_t i2c_slave_handle, const i2c_slave_rx_done_event_data_t *p_event_data, void *p_user_data);
+static bool _i2c_slave_on_request_callback(i2c_slave_dev_handle_t i2c_slave_handle, const i2c_slave_request_event_data_t *p_event_data, void *p_user_data);
+
+/**
+ * @brief I2C on receive callback.
+ * 
+ * @param i2c_slave_handle I2C slave handle of the I2C controller that caused the interrupt.
+ * @param p_event_data I2C slave capture event data.
+ * @param p_user_data User passed data on registration.
+ * @return bool Returns true if a context switch is needed.
+ */
+static bool _i2c_slave_on_receive_callback(i2c_slave_dev_handle_t i2c_slave_handle, const i2c_slave_rx_done_event_data_t *p_event_data, void *p_user_data);
 
 /* ============================== PRIVATE VARIABLES */
 
@@ -52,32 +67,54 @@ static i2c_slave_config_t _g_i2c_slave_config =
     .scl_io_num = CONFIG_I2C_SCL_GPIO,              //! SCL GPIO
     .clk_source = I2C_CLK_SRC_APB,                  //! APB clock source
     .send_buf_depth = SEND_BUF_DEPTH,               //! Transmit buffer ring buffer depth
+    .receive_buf_depth = RECEIVE_BUF_DEPTH,         //! Receive buffer depth
     .intr_priority = 3,                             //! Interrupt priority (highest)
     .i2c_port = I2C_NUM_0,                          //! I2C port 0
+    .flags.enable_internal_pullup = 0,              //! Disable internal pullups
 };
 
 /** @brief I2C slave handle. */
 static i2c_slave_dev_handle_t _g_i2c_slave_handle = NULL;
 
 /** @brief I2C read done semaphore handle */
-static SemaphoreHandle_t _g_sem_i2c_read_done = NULL;
+static SemaphoreHandle_t _g_sem_i2c_on_request_done = NULL;
+
+/** @brief I2C on receive queue handle */
+static QueueHandle_t _g_queue_i2c_on_receive = NULL;
+
+/** @brief I2C on receive queue length */
+static int _g_queue_i2c_on_receive_length = 0;
+
+/** @brief I2C on receive queue item size */
+static int _g_queue_i2c_on_receive_item_size = 0;
 
 /** @brief I2C slave event callbacks. */
 static i2c_slave_event_callbacks_t _g_i2c_slave_event_callbacks =
 {
-    .on_recv_done = _i2c_slave_receive_done_callback,
+    .on_request = _i2c_slave_on_request_callback,
+    .on_receive = _i2c_slave_on_receive_callback,
 };
 
 /* ============================== PUBLIC VARIABLES */
 
 /* ============================== PUBLIC FUNCTION DEFINITIONS */
 
-void i2c_manager_slave_init(void)
+void i2c_manager_slave_init(int on_receive_queue_length, int on_receive_queue_item_size)
 {
-    _g_sem_i2c_read_done = xSemaphoreCreateBinary();
-    if (NULL == _g_sem_i2c_read_done)
+    _g_queue_i2c_on_receive_length = on_receive_queue_length;
+    _g_queue_i2c_on_receive_item_size = on_receive_queue_item_size;
+
+    _g_sem_i2c_on_request_done = xSemaphoreCreateBinary();
+    if (NULL == _g_sem_i2c_on_request_done)
     {
-        ESP_LOGE(LOG_TAG, "Failed to create binary semaphore for I2C read done. Aborting!");
+        ESP_LOGE(LOG_TAG, "Failed to create binary semaphore for I2C on request done. Aborting!");
+        abort();
+    }
+
+    _g_queue_i2c_on_receive = xQueueCreate(_g_queue_i2c_on_receive_length, _g_queue_i2c_on_receive_item_size);
+    if (NULL == _g_queue_i2c_on_receive)
+    {
+        ESP_LOGE(LOG_TAG, "Failed to create queue for I2C on receive. Aborting!");
         abort();
     }
 
@@ -92,28 +129,56 @@ void i2c_manager_slave_init(void)
 
 void i2c_manager_slave_set_data_to_be_read(uint8_t *p_buf, size_t buf_size)
 {
-    /* Send the data to the transmit ring buffer */
-    ESP_ERROR_CHECK(i2c_slave_transmit(_g_i2c_slave_handle, p_buf, buf_size, SEND_BUF_TRANSMIT_TIMEOUT_MS));
+    uint32_t write_len = 0;
+
+    /* Send the data to the FIFO transmit buffer */
+    ESP_ERROR_CHECK(i2c_slave_write(_g_i2c_slave_handle, p_buf, buf_size, &write_len, SEND_BUF_TRANSMIT_TIMEOUT_MS));
+
+    gpio_set_interrupt_out();
+
+    /* Wait for ISR to signalize a master request */
+    xSemaphoreTake(_g_sem_i2c_on_request_done, portMAX_DELAY);
 }
 
-void i2c_manager_slave_get_written_data(uint8_t *p_buf, size_t buf_size)
+void i2c_manager_slave_receive_data(uint8_t *p_buf, size_t buf_size)
 {
-    /* Read the data */
-    ESP_ERROR_CHECK(i2c_slave_receive(_g_i2c_slave_handle, p_buf, buf_size));
+    if (buf_size != _g_queue_i2c_on_receive_item_size)
+    {
+        ESP_LOGE(LOG_TAG, "Buffer size to be read doesn't match. Aborting!");
+        abort();
+    }
 
-    /* Wait for ISR to signalize data arrival */
-    xSemaphoreTake(_g_sem_i2c_read_done, portMAX_DELAY);
+    /* Wait for ISR put data */
+    xQueueReceive(_g_queue_i2c_on_receive, p_buf, portMAX_DELAY);
+
+    gpio_reset_interrupt_out();
 }
 
 /* ============================== PRIVATE FUNCTION DEFINITIONS */
 
 /* ============================== INTERRUPT FUNCTION DEFINITIONS */
 
-static bool _i2c_slave_receive_done_callback(i2c_slave_dev_handle_t i2c_slave_handle, const i2c_slave_rx_done_event_data_t *p_event_data, void *p_user_data)
+static bool _i2c_slave_on_request_callback(i2c_slave_dev_handle_t i2c_slave_handle, const i2c_slave_request_event_data_t *p_event_data, void *p_user_data)
 {
     BaseType_t higher_priority_task_woken = pdFALSE;
     bool b_require_context_switch = false;
-    xSemaphoreGiveFromISR(_g_sem_i2c_read_done, &higher_priority_task_woken);
+
+    xSemaphoreGiveFromISR(_g_sem_i2c_on_request_done, &higher_priority_task_woken);
+
+    if (higher_priority_task_woken == pdTRUE)
+    {
+        b_require_context_switch = true;
+    }
+
+    return b_require_context_switch;
+}
+
+static bool _i2c_slave_on_receive_callback(i2c_slave_dev_handle_t i2c_slave_handle, const i2c_slave_rx_done_event_data_t *p_event_data, void *p_user_data)
+{
+    BaseType_t higher_priority_task_woken = pdFALSE;
+    bool b_require_context_switch = false;
+
+    xQueueSendToBackFromISR(_g_queue_i2c_on_receive, p_event_data->buffer, &higher_priority_task_woken);
 
     if (higher_priority_task_woken == pdTRUE)
     {
