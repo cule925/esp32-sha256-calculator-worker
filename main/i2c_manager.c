@@ -134,24 +134,31 @@ void i2c_manager_slave_set_data_to_be_read(uint8_t *p_buf, size_t buf_size)
     /* Send the data to the FIFO transmit buffer */
     ESP_ERROR_CHECK(i2c_slave_write(_g_i2c_slave_handle, p_buf, buf_size, &write_len, SEND_BUF_TRANSMIT_TIMEOUT_MS));
 
+    /* Signalize data ready to master */
     gpio_set_interrupt_out();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    gpio_reset_interrupt_out();
 
     /* Wait for ISR to signalize a master request */
     xSemaphoreTake(_g_sem_i2c_on_request_done, portMAX_DELAY);
 }
 
-void i2c_manager_slave_receive_data(uint8_t *p_buf, size_t buf_size)
+bool i2c_manager_slave_receive_data(uint8_t *p_buf, size_t buf_size)
 {
+    bool b_received_data = false;
+    BaseType_t ret = errQUEUE_EMPTY;
+
     if (buf_size != _g_queue_i2c_on_receive_item_size)
     {
         ESP_LOGE(LOG_TAG, "Buffer size to be read doesn't match. Aborting!");
         abort();
     }
 
-    /* Wait for ISR put data */
-    xQueueReceive(_g_queue_i2c_on_receive, p_buf, portMAX_DELAY);
+    /* Check if ISR put data */
+    ret = xQueueReceive(_g_queue_i2c_on_receive, p_buf, 0);
+    if (pdPASS == ret) b_received_data = true;
 
-    gpio_reset_interrupt_out();
+    return b_received_data;
 }
 
 /* ============================== PRIVATE FUNCTION DEFINITIONS */

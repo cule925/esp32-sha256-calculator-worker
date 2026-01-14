@@ -21,7 +21,10 @@
 /* ============================== MACRO DEFINITIONS */
 
 /** @brief Log tag. */
-#define LOG_TAG                 ("MAIN")
+#define LOG_TAG                             ("MAIN")
+
+/** @brief I2C on receive queue length. */
+#define I2C_ON_RECEIVE_QUEUE_LENGTH         (10)
 
 /* ============================== TYPE DEFINITIONS */
 
@@ -37,7 +40,7 @@ void app_main(void)
 {
     ESP_LOGI(LOG_TAG, "Initializing.");
     gpio_manager_init();
-    i2c_manager_slave_init(1, sizeof(sha256_input_variables_t));
+    i2c_manager_slave_init(I2C_ON_RECEIVE_QUEUE_LENGTH, sizeof(sha256_input_variables_queue_element_t));
     sha256_calculator_init();
     flow_control_init();
 }

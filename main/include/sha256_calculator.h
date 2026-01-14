@@ -20,7 +20,7 @@
 /* ============================== TYPE DEFINITIONS */
 
 /**
- * @brief The input variables for the calculator.
+ * @brief Calculator input variables.
  * 
  */
 typedef struct __attribute__((packed)) {
@@ -30,12 +30,30 @@ typedef struct __attribute__((packed)) {
 } sha256_input_variables_t;
 
 /**
- * @brief The solution of the calculator.
+ * @brief Calculator input variables queue element.
+ * 
+ */
+typedef struct __attribute__((packed)) {
+    sha256_input_variables_t sha256_input_variables;
+    uint8_t puzzle_id;
+} sha256_input_variables_queue_element_t;
+
+/**
+ * @brief Calculator solution.
  * 
  */
 typedef struct __attribute__((packed)) {
     uint32_t offset_solution;
 } sha256_offset_solution_t;
+
+/**
+ * @brief Calculator solution queue element.
+ * 
+ */
+typedef struct __attribute__((packed)) {
+    sha256_offset_solution_t sha256_offset_solution;
+    uint8_t puzzle_id;
+} sha256_offset_solution_queue_element_t;
 
 /* ============================== PUBLIC FUNCTION DECLARATIONS */
 
@@ -46,17 +64,19 @@ typedef struct __attribute__((packed)) {
 void sha256_calculator_init(void);
 
 /**
- * @brief Puts input variables the back of the input variable queue.
+ * @brief Puts input variables the back of the input variable queue. Blocking function.
  * 
- * @param p_sha256_input_variables Pointer to the input variables which will be copied to the queue.
+ * @param p_sha256_input_variables_queue_element Pointer to the input variables queue element which will be copied to the queue.
  */
-void sha256_calculator_queue_input_put(sha256_input_variables_t *p_sha256_input_variables);
+void sha256_calculator_queue_input_put(sha256_input_variables_queue_element_t *p_sha256_input_variables_queue_element);
 
 /**
- * @brief Gets offset solution from the solution queue.
+ * @brief Gets offset solution from the solution queue if there is any. Non-blocking function.
  * 
- * @param p_sha256_input_variables Pointer to the offset solution which will be copied from the queue.
+ * @param p_sha256_offset_solution_queue_element Pointer to the offset solution queue element which will be copied from the queue.
+ * 
+ * @return bool Returns true if solution to a puzzle found, else false.
  */
-void sha256_calculator_queue_solution_get(sha256_offset_solution_t *p_sha256_offset_solution);
+bool sha256_calculator_queue_solution_get(sha256_offset_solution_queue_element_t *p_sha256_offset_solution_queue_element);
 
 #endif

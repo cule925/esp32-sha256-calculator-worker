@@ -64,14 +64,14 @@ void sha256_calculator_init(void)
 {
     BaseType_t result = pdPASS;
 
-    _g_queue_sha256_input = xQueueCreate(SHA256_INPUT_QUEUE_SIZE, sizeof(sha256_input_variables_t));
+    _g_queue_sha256_input = xQueueCreate(SHA256_INPUT_QUEUE_SIZE, sizeof(sha256_input_variables_queue_element_t));
     if (NULL == _g_queue_sha256_input)
     {
         ESP_LOGE(LOG_TAG, "Failed to create queue for SHA256 input. Aborting!");
         abort();
     }
 
-    _g_queue_sha256_solution = xQueueCreate(SHA256_SOLUTION_QUEUE_SIZE, sizeof(sha256_offset_solution_t));
+    _g_queue_sha256_solution = xQueueCreate(SHA256_SOLUTION_QUEUE_SIZE, sizeof(sha256_offset_solution_queue_element_t));
     if (NULL == _g_queue_sha256_solution)
     {
         ESP_LOGE(LOG_TAG, "Failed to create queue for SHA256 solution. Aborting!");
@@ -88,23 +88,31 @@ void sha256_calculator_init(void)
     ESP_LOGI(LOG_TAG, "Initialized calculator.");
 }
 
-void sha256_calculator_queue_input_put(sha256_input_variables_t *p_sha256_input_variables)
+void sha256_calculator_queue_input_put(sha256_input_variables_queue_element_t *p_sha256_input_variables_queue_element)
 {
-    xQueueSendToBack(_g_queue_sha256_input, (void*)p_sha256_input_variables, portMAX_DELAY);
+    xQueueSendToBack(_g_queue_sha256_input, (void*)p_sha256_input_variables_queue_element, portMAX_DELAY);
 }
 
-void sha256_calculator_queue_solution_get(sha256_offset_solution_t *p_sha256_offset_solution)
+bool sha256_calculator_queue_solution_get(sha256_offset_solution_queue_element_t *p_sha256_offset_solution_queue_element)
 {
-    xQueueReceive(_g_queue_sha256_solution, (void*)p_sha256_offset_solution, portMAX_DELAY);
+    bool b_received_data = false;
+    BaseType_t ret = errQUEUE_EMPTY;
+
+    ret = xQueueReceive(_g_queue_sha256_solution, (void*)p_sha256_offset_solution_queue_element, 0);
+    if (pdPASS == ret) b_received_data = true;
+
+    return b_received_data;
 }
 
 /* ============================== PRIVATE FUNCTION DEFINITIONS */
 
 static void _calculate_sha256_task(void *p_task_params)
 {
-    sha256_input_variables_t sha256_input_variables = {0};
-    sha256_offset_solution_t sha256_offset_solution = {0};
-    BaseType_t result = pdFALSE;
+    sha256_input_variables_queue_element_t sha256_input_variables_queue_element = {0};
+    sha256_input_variables_t *p_sha256_input_variables = &sha256_input_variables_queue_element.sha256_input_variables;
+    sha256_offset_solution_queue_element_t sha256_offset_solution_queue_element = {0};
+    sha256_offset_solution_t *p_sha256_offset_solution = &sha256_offset_solution_queue_element.sha256_offset_solution;
+    BaseType_t ret = errQUEUE_EMPTY;
     uint8_t hash[SHA256_BYTE_DIGEST_SIZE] = {0};
     uint8_t full_bytes = 0;
     uint8_t remaining_bits = 0;
@@ -113,19 +121,28 @@ static void _calculate_sha256_task(void *p_task_params)
     int bit_cmp = 1;
     TickType_t ticks_to_wait = portMAX_DELAY;
 
+    uint32_t current_offset = 0;
+    uint8_t current_puzzle_id = 0;
+
+
     while (1)
     {
-        /* Try to read from queue */
-        result = xQueueReceive(_g_queue_sha256_input, (void*)(&sha256_input_variables), ticks_to_wait);
+        /* Read inputs from queue, blocking call immediately after a solution found, else non-blocking call */
+        ret = xQueueReceive(_g_queue_sha256_input, (void *)&sha256_input_variables_queue_element, ticks_to_wait);
 
         /* If new inputs read, recalculate parameters */
-        if (pdTRUE == result)
+        if (pdPASS == ret)
         {
-            /* Next queue receive will be non-blocking */
+            /* Set new offset */
+            current_offset = p_sha256_input_variables->input_offset;
+            /* Set new puzzle ID */
+            current_puzzle_id = sha256_input_variables_queue_element.puzzle_id;
+
+            /* Set next reads from input queue as non-blocking calls */
             ticks_to_wait = 0;
 
-            full_bytes = (sha256_input_variables.target_solution_mask_offset + 1) / 8;
-            remaining_bits = (sha256_input_variables.target_solution_mask_offset + 1) % 8;
+            full_bytes = (p_sha256_input_variables->target_solution_mask_offset + 1) / 8;
+            remaining_bits = (p_sha256_input_variables->target_solution_mask_offset + 1) % 8;
             if (remaining_bits != 0) remaining_bits_mask = 0xFF << (8 - remaining_bits);
 
             byte_cmp = (0 == full_bytes) ? 0 : 1;
@@ -133,32 +150,35 @@ static void _calculate_sha256_task(void *p_task_params)
         }
 
         /* Hash the input offset */
-        mbedtls_sha256((uint8_t *)(&sha256_input_variables.input_offset), sizeof(sha256_input_variables.input_offset), (unsigned char *)&hash, 0);
+        mbedtls_sha256((uint8_t *)(&current_offset), sizeof(current_offset), (unsigned char *)&hash, 0);
 
         /* Compare the output hash with the target */
         if (0 != full_bytes)
         {
-            byte_cmp = memcmp(hash, sha256_input_variables.target_solution, full_bytes);
+            byte_cmp = memcmp(hash, p_sha256_input_variables->target_solution, full_bytes);
         }
         if (0 != remaining_bits)
         {
-            bit_cmp = ((hash[full_bytes] & remaining_bits_mask) == (sha256_input_variables.target_solution[full_bytes] & remaining_bits_mask)) ? 0 : 1;
+            bit_cmp = ((hash[full_bytes] & remaining_bits_mask) == (p_sha256_input_variables->target_solution[full_bytes] & remaining_bits_mask)) ? 0 : 1;
         }
 
-        /* Send discovered current offset if match, non-blocking */
+        /* If there is a match, send discovered solution into queue, blocking call */
         if ((0 == byte_cmp) && (0 == bit_cmp))
         {
-            /* Send solution into solution queue */
-            sha256_offset_solution.offset_solution = sha256_input_variables.input_offset;
-            xQueueSendToBack(_g_queue_sha256_solution, (void*)(&sha256_offset_solution), 0);
+            /* Set offset solution as current offset */
+            p_sha256_offset_solution->offset_solution = current_offset;
+            /* Set puzzle ID of the solution */
+            sha256_offset_solution_queue_element.puzzle_id = current_puzzle_id;
 
-            /* Next queue receive will be blocking */
+            xQueueSendToBack(_g_queue_sha256_solution, (void *)(&sha256_offset_solution_queue_element), portMAX_DELAY);
+
+            /* Next queue receive will be blocking (wait for new input variables) */
             ticks_to_wait = portMAX_DELAY;
         }
-        /* Increment the offset if no match */
+        /* Increment the current offset if no match */
         else
         {
-            sha256_input_variables.input_offset++;
+            current_offset++;
         }
     }
 }

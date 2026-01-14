@@ -41,12 +41,6 @@ static void _flow_control_task(void *p_task_params);
 
 /* ============================== PRIVATE VARIABLES */
 
-/** @brief Data for I2C master when it writes. */
-static sha256_input_variables_t _g_sha256_input_variables = {0};
-
-/** @brief Data for I2C master when it reads. */
-static sha256_offset_solution_t _g_sha256_offset_solution = {0};
-
 /** @brief Flow control task handle. */
 static TaskHandle_t _g_task_handle_flow_control = NULL;
 
@@ -72,18 +66,40 @@ void flow_control_init(void)
 
 static void _flow_control_task(void *p_task_params)
 {
+    sha256_input_variables_queue_element_t sha256_input_variables_queue_element = {0};
+    sha256_offset_solution_queue_element_t sha256_offset_solution_queue_element = {0};
+    uint8_t current_puzzle_id = 0;
+    bool b_received_new_input = false;
+    bool b_received_solution = false;
+
     while (1)
     {
-        /* Receive data and reset flag */
-        i2c_manager_slave_receive_data((uint8_t*)&_g_sha256_input_variables, sizeof(sha256_input_variables_t));
+        /* Check for new input and reset flag */
+        b_received_new_input = i2c_manager_slave_receive_data((uint8_t*)&sha256_input_variables_queue_element, sizeof(sha256_input_variables_queue_element));
 
-        /* Send data for calculation */
-        sha256_calculator_queue_input_put(&_g_sha256_input_variables);
-        sha256_calculator_queue_solution_get(&_g_sha256_offset_solution);
-        ESP_LOGI(LOG_TAG, "Offset solution %d", _g_sha256_offset_solution.offset_solution);
+        /* If input received */
+        if (true == b_received_new_input)
+        {
+            ESP_LOGI(LOG_TAG, "Received new input! Puzzle ID: %d", sha256_input_variables_queue_element.puzzle_id);
 
-        /* Set data to be read and set flag */
-        i2c_manager_slave_set_data_to_be_read((uint8_t *)&_g_sha256_offset_solution, sizeof(sha256_offset_solution_t));
+            /* Set new puzzle id */
+            current_puzzle_id = sha256_input_variables_queue_element.puzzle_id;
+
+            /* Send data for calculation */
+            sha256_calculator_queue_input_put(&sha256_input_variables_queue_element);
+        }
+
+        /* Check for solution */
+        b_received_solution = sha256_calculator_queue_solution_get(&sha256_offset_solution_queue_element);
+
+        /* If received solution and puzzle ID matches */
+        if ((true == b_received_solution) && (current_puzzle_id == sha256_offset_solution_queue_element.puzzle_id))
+        {
+            ESP_LOGI(LOG_TAG, "Offset solution: %d", sha256_offset_solution_queue_element.sha256_offset_solution.offset_solution);
+
+            /* Set data to be read and set flag */
+            i2c_manager_slave_set_data_to_be_read((uint8_t *)&sha256_offset_solution_queue_element, sizeof(sha256_offset_solution_queue_element));
+        }
     }
 }
 

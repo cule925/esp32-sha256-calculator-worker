@@ -25,7 +25,7 @@
 void gpio_manager_init(void);
 
 /**
- * @brief Sets data in the send ring buffer that will be read when master issues a read command.
+ * @brief Activates interrupt line.
  * 
  * @param p_buf Pointer to the buffer from where the data will be copied in the send ring buffer.
  * @param buf_size Size of the buffer.
@@ -33,7 +33,7 @@ void gpio_manager_init(void);
 void gpio_set_interrupt_out(void);
 
 /**
- * @brief Gets data that master wrote.
+ * @brief Deactivates interrupt line.
  * 
  * @param p_buf Pointer to the buffer where the data will be copied when written.
  * @param buf_size Size of the buffer.

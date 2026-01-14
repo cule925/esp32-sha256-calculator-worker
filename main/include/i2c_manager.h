@@ -27,19 +27,21 @@
 void i2c_manager_slave_init(int on_receive_queue_length, int on_receive_queue_item_size);
 
 /**
- * @brief Sets data in the send ring buffer that will be read when master issues a read request.
+ * @brief Sets data in the send ring buffer that will be read when master issues a read request. Blocking function.
  * 
- * @param p_buf Pointer to the buffer from where the data will be copied in the send ring buffer.
+ * @param p_buf Pointer to the buffer from where the data will be copied to the send buffer.
  * @param buf_size Size of the buffer.
  */
 void i2c_manager_slave_set_data_to_be_read(uint8_t *p_buf, size_t buf_size);
 
 /**
- * @brief Reads data that master wrote or will write.
+ * @brief Reads new data if master wrote it. Non-blocking function.
  * 
- * @param p_buf Pointer to the buffer where the data will be copied when written.
+ * @param p_buf Pointer to the buffer to where the data will be copied from the receive buffer.
  * @param buf_size Size of the buffer.
+ * 
+ * @return bool Returns true if new data came from master, else false.
  */
-void i2c_manager_slave_receive_data(uint8_t *p_buf, size_t buf_size);
+bool i2c_manager_slave_receive_data(uint8_t *p_buf, size_t buf_size);
 
 #endif
