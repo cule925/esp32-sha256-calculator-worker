@@ -1,22 +1,42 @@
 menu "App setup"
 
-    config I2C_SDA_GPIO
-        int "I2C SDA GPIO"
-        default 21
+    choice COMM_PROTOCOL
+        prompt "Communication protocol"
+        default COMM_PROTOCOL_I2C
         help
-            I2C SDA GPIO.
+            Choose the communication protocol implementation
 
-    config I2C_SCL_GPIO
-        int "I2C SCL GPIO"
-        default 22
-        help
-            I2C SCL GPIO.
+        config COMM_PROTOCOL_I2C
+            bool "I2C"
+        config COMM_PROTOCOL_SPI
+            bool "SPI"
+    endchoice
 
-    config I2C_SLAVE_ADDRESS
-        hex "I2C slave address"
-        default 0x08
-        help
-            I2C slave address.
+    if COMM_PROTOCOL_I2C
+
+        menu "I2C setup"
+    
+        config I2C_SDA_GPIO
+            int "I2C SDA GPIO"
+            default 21
+            help
+                I2C SDA GPIO.
+
+        config I2C_SCL_GPIO
+            int "I2C SCL GPIO"
+            default 22
+            help
+                I2C SCL GPIO.
+
+        config I2C_SLAVE_ADDRESS
+            hex "I2C slave address"
+            default 0x08
+            help
+                I2C slave address.
+
+        endmenu
+
+    endif
 
     config GPIO_INTERRUPT_OUT
         int "GPIO interrupt out"

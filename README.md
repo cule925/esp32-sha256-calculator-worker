@@ -1,4 +1,4 @@
-# ESP32 I2C slave SHA256 calculator
+# ESP32 SHA256 calculator worker
 
 To setup your ESP-IDF version 5.5.2 environment in your terminal, execute:
 
@@ -40,7 +40,7 @@ idf.py -p <port> monitor -b <Baud rate>
 
 Default Baud rate is 115200. Press `Ctrl + ]` to exit the monitor.
 
-## Multiple I2C slave devices
+## I2C - multiple slave devices
 
 To have multiple ESP32 slave devices on the same I2C bus, they must have different I2C slave addresses. Enter the menuconfig using the following command:
 

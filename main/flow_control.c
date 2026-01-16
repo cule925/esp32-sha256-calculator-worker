@@ -15,7 +15,7 @@
 #include "sdkconfig.h"
 #include "flow_control.h"
 #include "sha256_calculator.h"
-#include "i2c_manager.h"
+#include "comm_manager.h"
 
 /* ============================== MACRO DEFINITIONS */
 
@@ -75,7 +75,7 @@ static void _flow_control_task(void *p_task_params)
     while (1)
     {
         /* Check for new input and reset flag */
-        b_received_new_input = i2c_manager_slave_receive_data((uint8_t*)&sha256_input_variables_queue_element, sizeof(sha256_input_variables_queue_element));
+        b_received_new_input = comm_manager_receive_data((uint8_t*)&sha256_input_variables_queue_element, sizeof(sha256_input_variables_queue_element));
 
         /* If input received */
         if (true == b_received_new_input)
@@ -98,7 +98,7 @@ static void _flow_control_task(void *p_task_params)
             ESP_LOGI(LOG_TAG, "Offset solution: %d", sha256_offset_solution_queue_element.sha256_offset_solution.offset_solution);
 
             /* Set data to be read and set flag */
-            i2c_manager_slave_set_data_to_be_read((uint8_t *)&sha256_offset_solution_queue_element, sizeof(sha256_offset_solution_queue_element));
+            comm_manager_set_data_to_be_read((uint8_t *)&sha256_offset_solution_queue_element, sizeof(sha256_offset_solution_queue_element));
         }
     }
 }
