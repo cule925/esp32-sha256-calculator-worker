@@ -14,6 +14,14 @@ Set the target to ESP32 by executing:
 idf.py set-target esp32
 ```
 
+## Enter configuration
+
+Enter the `menuconfig` configuration screen by executing:
+
+```
+idf.py menuconfig
+```
+
 ## Building the binary
 
 Build the project by executing:
@@ -42,12 +50,10 @@ Default Baud rate is 115200. Press `Ctrl + ]` to exit the monitor.
 
 ## I2C - multiple slave devices
 
-To have multiple ESP32 slave devices on the same I2C bus, they must have different I2C slave addresses. Enter the menuconfig using the following command:
-
-```
-idf.py menuconfig
-```
-
-Go to "App setup" and edit the "I2C slave address" to a desired new unused address. **Build and flash** to the new ESP32 device to be added to the I2C bus. Repeat this step with each new added device.
+To have multiple ESP32 slave devices on the same I2C bus, each of their I2C slave addresses need to be unique. To add a new ESP32 slave device onto the bus, enter the `menuconfig`, go to `App setup`, select `I2C` under `Communication protocol`, enter the `I2C setup` submenu and edit the `I2C slave address` to a desired new unused address. Save the changes, rebuild the firmware and flash it onto the new ESP32 device to be added to the I2C bus. Repeat this step with each new device you wish to add.
 
 Saved changes in menuconfig edit the `sdkconfig` file.
+
+## SPI - multiple slave devices
+
+**TODO:**
