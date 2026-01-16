@@ -11,6 +11,9 @@
 #define __COMM_MANAGER_H__
 
 /* ============================== INCLUDES */
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
 
 /* ============================== MACRO DEFINITIONS */
 

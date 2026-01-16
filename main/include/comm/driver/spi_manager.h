@@ -1,14 +1,14 @@
 /**
- * @file i2c_manager.h
+ * @file spi_manager.h
  * @author Iwan Ćulumović
- * @brief See i2c_manager.c file.
+ * @brief See spi_manager.c file.
  * 
  * @copyright Copyright (c) 2026
  * 
  */
 
-#ifndef __I2C_MANAGER_H__
-#define __I2C_MANAGER_H__
+#ifndef __SPI_MANAGER_H__
+#define __SPI_MANAGER_H__
 
 /* ============================== INCLUDES */
 #include <stdbool.h>
@@ -22,12 +22,10 @@
 /* ============================== PUBLIC FUNCTION DECLARATIONS */
 
 /**
- * @brief Initialize I2C slave.
+ * @brief Initialize SPI slave.
  * 
- * @param on_receive_queue_length On receive queue length.
- * @param on_receive_queue_item_size On receive queue item size.
  */
-void i2c_manager_slave_init(int on_receive_queue_length, int on_receive_queue_item_size);
+void spi_manager_slave_init(void);
 
 /**
  * @brief Sets data in the send ring buffer that will be read when master issues a read request. Blocking function.
@@ -35,7 +33,7 @@ void i2c_manager_slave_init(int on_receive_queue_length, int on_receive_queue_it
  * @param p_buf Pointer to the buffer from where the data will be copied to the send buffer.
  * @param buf_size Size of the buffer.
  */
-void i2c_manager_slave_set_data_to_be_read(uint8_t *p_buf, size_t buf_size);
+void spi_manager_slave_set_data_to_be_read(uint8_t *p_buf, size_t buf_size);
 
 /**
  * @brief Reads new data if master wrote it. Non-blocking function.
@@ -45,6 +43,6 @@ void i2c_manager_slave_set_data_to_be_read(uint8_t *p_buf, size_t buf_size);
  * 
  * @return bool Returns true if new data came from master, else false.
  */
-bool i2c_manager_slave_receive_data(uint8_t *p_buf, size_t buf_size);
+bool spi_manager_slave_receive_data(uint8_t *p_buf, size_t buf_size);
 
 #endif

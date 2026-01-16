@@ -8,5 +8,6 @@ idf_component_register(
 
 if(CONFIG_COMM_PROTOCOL_I2C)
     target_sources(${COMPONENT_LIB} PRIVATE "comm/driver/i2c_manager.c")
-elseif(CONFIG_PROTOCOL_SPI)
+elseif(CONFIG_COMM_PROTOCOL_SPI)
+    target_sources(${COMPONENT_LIB} PRIVATE "comm/driver/spi_manager.c")
 endif()

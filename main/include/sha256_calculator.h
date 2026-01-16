@@ -11,6 +11,8 @@
 #define __SHA256_CALCULATOR_H__
 
 /* ============================== INCLUDES */
+#include <stdbool.h>
+#include <stdint.h>
 
 /* ============================== MACRO DEFINITIONS */
 
