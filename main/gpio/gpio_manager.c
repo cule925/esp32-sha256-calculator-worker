@@ -11,7 +11,7 @@
 
 #include "esp_log.h"
 #include "sdkconfig.h"
-#include "gpio_manager.h"
+#include "gpio/gpio_manager.h"
 #include "driver/gpio.h"
 
 /* ============================== MACRO DEFINITIONS */

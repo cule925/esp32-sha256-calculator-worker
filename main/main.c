@@ -13,9 +13,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
-#include "comm_manager.h"
+#include "comm/comm_manager.h"
 #include "sha256_calculator.h"
-#include "gpio_manager.h"
+#include "gpio/gpio_manager.h"
 #include "flow_control.h"
 
 /* ============================== MACRO DEFINITIONS */

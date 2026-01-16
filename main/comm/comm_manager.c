@@ -11,11 +11,11 @@
 
 #include "esp_log.h"
 #include "sdkconfig.h"
-#include "comm_manager.h"
+#include "comm/comm_manager.h"
 #include "sha256_calculator.h"
 
 #ifdef CONFIG_COMM_PROTOCOL_I2C
-#include "i2c_manager.h"
+#include "comm/driver/i2c_manager.h"
 #elif CONFIG_COMM_PROTOCOL_SPI
 
 #endif

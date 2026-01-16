@@ -15,7 +15,7 @@
 #include "sdkconfig.h"
 #include "flow_control.h"
 #include "sha256_calculator.h"
-#include "comm_manager.h"
+#include "comm/comm_manager.h"
 
 /* ============================== MACRO DEFINITIONS */
 

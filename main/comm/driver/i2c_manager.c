@@ -11,12 +11,12 @@
 
 #include "esp_log.h"
 #include "sdkconfig.h"
-#include "i2c_manager.h"
+#include "comm/driver/i2c_manager.h"
 #include "driver/i2c_slave.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
-#include "gpio_manager.h"
+#include "gpio/gpio_manager.h"
 
 /* ============================== MACRO DEFINITIONS */
 
