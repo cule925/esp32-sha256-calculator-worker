@@ -2,6 +2,7 @@ idf_component_register(
     SRCS "comm/comm_manager.c" "flow_control.c" "gpio/gpio_manager.c" "sha256_calculator.c" "main.c"
     INCLUDE_DIRS "include"
     PRIV_REQUIRES esp_driver_i2c
+    PRIV_REQUIRES esp_driver_spi
     PRIV_REQUIRES mbedtls
     PRIV_REQUIRES esp_driver_gpio
 )

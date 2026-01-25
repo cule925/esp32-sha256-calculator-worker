@@ -38,6 +38,38 @@ menu "App setup"
 
     endif
 
+    if COMM_PROTOCOL_SPI
+
+        menu "SPI setup"
+
+        config SPI_MISO_GPIO
+            int "SPI MISO GPIO"
+            default 12
+            help
+                SPI MISO GPIO.
+
+        config SPI_MOSI_GPIO
+            int "SPI MOSI GPIO"
+            default 13
+            help
+                SPI MOSI GPIO.
+
+        config SPI_SCLK_GPIO
+            int "SPI SCLK GPIO"
+            default 14
+            help
+                SPI SCLK GPIO.
+
+        config SPI_CS_GPIO
+            int "SPI CS GPIO"
+            default 15
+            help
+                SPI CS GPIO.
+
+        endmenu
+
+    endif
+
     config GPIO_INTERRUPT_OUT
         int "GPIO interrupt out"
         default 18

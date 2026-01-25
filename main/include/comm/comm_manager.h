@@ -30,7 +30,7 @@ void comm_manager_init(void);
 /**
  * @brief Send data to master.
  * 
- * @param p_buf Pointer to the buffer from where the data will be copied to the send buffer.
+ * @param p_buf Pointer to the buffer from where the data will be copied to the send buffer. Blocking function.
  * @param buf_size Size of the buffer.
  */
 void comm_manager_set_data_to_be_read(uint8_t *p_buf, size_t buf_size);
